@@ -1,0 +1,147 @@
+\documentclass{article}
+\usepackage[UTF8]{ctex}
+\usepackage{amsmath,amssymb,amsthm,bm}
+\usepackage[a4paper,margin=1in]{geometry}
+
+\title{模型说明与可微替代损失}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{问题定义}
+
+设输入特征为 \(x\)，模型参数为 \(\theta\)。模型首先根据输入特征输出预测值
+\begin{equation}
+\hat y = f_\theta(x).
+\end{equation}
+
+在得到预测值 \(\hat y\) 后，再通过一个决策函数 \(h(\cdot)\) 生成最终决策
+\begin{equation}
+\hat z = h(\hat y).
+\end{equation}
+
+其中，\(\hat z\) 表示由模型预测结果诱导出的决策。通常，\(h(\cdot)\) 是一个基于打分进行最优选择的决策规则，例如通过 \(\arg\max\) 从若干候选动作中选出收益最大的动作。
+
+\section{原始决策损失}
+
+我们希望模型训练目标能够直接服务于最终决策效果，而不是仅仅提高预测精度。为此，定义基于决策结果的损失函数。记真实环境下与决策相关的指标为 \(y\)，随机分配到的决策标签为 \(t\)。
+
+原始损失可以写为
+\begin{equation}
+\mathcal{L}_{\text{orig}}(\theta) = - \mathrm{EOM}\bigl(h(\hat y)\bigr).
+\end{equation}
+
+进一步地，若将 \(\mathrm{EOM}\) 写成对满足决策匹配条件样本的求和形式，则可表示为
+\begin{equation}
+\mathcal{L}_{\text{orig}}(\theta)
+= - \sum_{i} y_i \, \mathbf{1}\!\left(h(\hat y_i)=t_i\right),
+\end{equation}
+其中：
+\begin{itemize}
+    \item \(i\) 表示样本索引；
+    \item \(y_i\) 表示样本 \(i\) 的真实结果；
+    \item \(t_i\) 表示样本 \(i\) 被随机分配到的决策标签；
+    \item \(\mathbf{1}(\cdot)\) 为示性函数，当括号内条件成立时取 1，否则取 0。
+\end{itemize}
+
+该损失的含义是：只有当模型产生的决策 \(h(\hat y_i)\) 与样本实际被分配到的决策标签 \(t_i\) 一致时，样本 \(i\) 的观测结果 \(y_i\) 才会被计入目标函数。
+
+\section{不可微问题}
+
+在实际中，决策函数 \(h(\hat y)\) 常写为
+\begin{equation}
+h(\hat y)=\arg\max_{k \in \mathcal{A}} s_k(\hat y),
+\end{equation}
+其中 \(\mathcal{A}\) 表示候选动作集合，\(s_k(\hat y)\) 表示动作 \(k\) 在预测值 \(\hat y\) 下对应的打分函数。
+
+由于 \(\arg\max\) 是离散选择操作，因此 \(h(\hat y)\) 对 \(\hat y\) 不可微，从而损失函数
+\(\mathcal{L}_{\text{orig}}(\theta)\) 无法直接通过梯度下降对参数 \(\theta\) 进行优化。
+
+\section{Softmax 可微替代}
+
+为了实现端到端训练，这里采用最简单的可微近似方式：用 softmax 替代原始的 \(\arg\max\) 操作。
+
+首先，对每个候选动作 \(k\) 定义其得分
+\begin{equation}
+s_k = s_k(\hat y).
+\end{equation}
+
+然后构造 softmax 概率：
+\begin{equation}
+\pi_k(\hat y)
+=
+\frac{\exp(s_k/\tau)}
+{\sum_{j \in \mathcal{A}} \exp(s_j/\tau)},
+\end{equation}
+其中 \(\tau>0\) 为温度参数。当 \(\tau\) 越小时，softmax 分布越接近 one-hot，从而越接近原始的 \(\arg\max\) 选择。
+
+于是，原来的硬决策
+\begin{equation}
+h(\hat y)=\arg\max_{k \in \mathcal{A}} s_k(\hat y)
+\end{equation}
+可以用 softmax 概率向量
+\begin{equation}
+\tilde z(\hat y)=\bigl(\pi_k(\hat y)\bigr)_{k\in\mathcal{A}}
+\end{equation}
+进行替代。
+
+\section{替代损失函数}
+
+将原先基于硬匹配的示性函数
+\(\mathbf{1}(h(\hat y_i)=t_i)\)
+替换为 softmax 下对应动作 \(t_i\) 的概率 \(\pi_{t_i}(\hat y_i)\)，可得到可微替代损失：
+\begin{equation}
+\mathcal{L}_{\text{soft}}(\theta)
+=
+- \sum_i y_i \, \pi_{t_i}(\hat y_i).
+\end{equation}
+
+将 \(\hat y_i=f_\theta(x_i)\) 代入，上式也可写为
+\begin{equation}
+\mathcal{L}_{\text{soft}}(\theta)
+=
+- \sum_i y_i \,
+\frac{
+\exp\!\bigl(s_{t_i}(f_\theta(x_i))/\tau\bigr)
+}{
+\sum_{j\in\mathcal{A}}
+\exp\!\bigl(s_j(f_\theta(x_i))/\tau\bigr)
+}.
+\end{equation}
+
+\section{训练解释}
+
+该替代损失具有以下特点：
+
+\begin{itemize}
+    \item 当模型更倾向于选择与随机分配标签 \(t_i\) 一致的动作时，\(\pi_{t_i}(\hat y_i)\) 会增大；
+    \item 若对应样本的真实结果 \(y_i\) 较大，则该样本会对目标函数产生更强的正向贡献；
+    \item 整个目标函数关于 \(\hat y\) 以及参数 \(\theta\) 都是可微的，因此可以利用反向传播进行优化。
+\end{itemize}
+
+\section{总结}
+
+综上，该模型的流程可以概括为：
+\begin{equation}
+x \xrightarrow{f_\theta} \hat y \xrightarrow{h} \hat z.
+\end{equation}
+
+原始损失基于硬决策选择：
+\begin{equation}
+\mathcal{L}_{\text{orig}}(\theta)
+=
+- \sum_i y_i \, \mathbf{1}\!\left(h(\hat y_i)=t_i\right),
+\end{equation}
+但由于 \(h(\hat y)\) 中含有 \(\arg\max\)，损失不可微。
+
+因此，采用 softmax 对 \(\arg\max\) 进行平滑近似，得到可微替代损失：
+\begin{equation}
+\mathcal{L}_{\text{soft}}(\theta)
+=
+- \sum_i y_i \, \pi_{t_i}(\hat y_i),
+\end{equation}
+从而可以将预测模型与决策过程联合起来进行端到端训练。
+
+\end{document}

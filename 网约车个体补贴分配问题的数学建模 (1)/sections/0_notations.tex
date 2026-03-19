@@ -1,0 +1,37 @@
+全文所用数学符号定义如表~\ref{tab:nomenclature} 所示。
+\begin{table}[htbp]
+    \centering
+    \caption{数学符号与变量定义}
+    \label{tab:nomenclature}
+    \renewcommand{\arraystretch}{1.3} % 增加行高，提升阅读舒适度
+    \begin{tabular}{p{2.0cm} p{12.5cm}}
+        \toprule
+        \textbf{符号} & \textbf{定义与说明} \\
+        \midrule
+        \multicolumn{2}{l}{\textit{\textbf{1. 集合与参数 (Sets \& Parameters)}}} \\
+        \midrule
+        $\mathcal{I}$ & 出行请求（Request）样本集合，$\mathcal{I} = \{1, \dots, N\}$，索引为 $i$ \\
+        $\mathcal{J}$ & 补贴策略（Treatment）集合，$\mathcal{J} = \{1, \dots, M\}$，索引为 $j$ \\
+        $\mathcal{X}$ & 请求特征空间，$\bm{x}_i \in \mathcal{X}$ 包含时间、地理、历史行为等维度 \\
+        $t_j$         & 第 $j$ 个策略对应的具体折扣 \\
+        $B$           & 补贴预算 \\
+        \midrule
+        \multicolumn{2}{l}{\textit{\textbf{2. 运筹决策模型 (Optimization Model)}}} \\
+        \midrule
+        $z_{ij}$      & 二元决策变量（Binary Variable）。若对请求 $i$ 选择策略 $j$，则 $z_{ij}=1$，否则 $0$ \\
+        $v_{ij}$      & 预期收益（Value）。请求 $i$ 在策略 $j$ 下的预期业务收益（如 GMV） \\
+        $c_{ij}$      & 预期成本（Cost）。请求 $i$ 在策略 $j$ 下消耗的补贴。 \\
+        $\lambda$     & 拉格朗日乘子（Lagrange Multiplier），用于松弛预算约束 $B$ \\
+        $D(\lambda)$  & 对偶函数，表示给定 $\lambda$ 时的最大化目标值 \\
+        \midrule
+        \multicolumn{2}{l}{\textit{\textbf{3.模型 (Prediction \& Causal Model)}}} \\
+        \midrule
+        $\bm{x}_i$    & 请求 $i$ 的特征向量 \\
+        $y_i$         & 观测到的真实结果（Outcome），例如是否完单（$y \in \{0,1\}$） \\
+        $\hat{y}_{ij}$ & 预测模型输出的条件概率，即 $\hat{y}_{ij} = P(y=1 \mid \bm{x}_i, T=t_j)$ \\
+        $\tau(\bm{x}_i)$ & 因果增益（Uplift）。表示干预 $t_j$ 相对于基线（Control）带来的边际转化提升 \\
+        $h(\cdot)$    & 策略映射函数（Policy Function），$h: \mathcal{X} \rightarrow \mathcal{J}$。基于特征输出最优策略索引 \\
+        $Q(\pi)$      & 策略 $\pi$ 的 Qini 系数，衡量策略在反事实评估中的排序能力 \\
+        \bottomrule
+    \end{tabular}
+\end{table}

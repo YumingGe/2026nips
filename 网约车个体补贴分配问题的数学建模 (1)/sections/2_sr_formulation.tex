@@ -1,0 +1,117 @@
+虽然无论论文还是滴滴内部都是预算约束进行建模
+\cite{chen2023two}, \cite{zhang2021bcorle},\cite{zhou2024decision}
+但是实际情况是补贴率约束的运筹问题。仿真相当于通过对预算约束问题求解，简洁解补贴率约束的问题。本章节考虑直接对补贴约束问题进行对偶求解：
+
+主要的区别在于：
+
+1.约束项的变化：预算不再是一个常数 $B$ ，取而代之的是与 $z_{ij}$ 相关的 $\sum_i\sum_j\rho \cdot v_{ij}\cdot z_{ij}$ 项。
+
+2.拉格朗日函数的合并：$\mu$ 乘子不仅作用于 $c_{ij}$，也作用于 $v_{ij}$，导致选择最优 $j^*$ 时的排序公式发生了系数变化。
+
+\begin{equation} \label{eq:mckp_sr}
+\begin{aligned}
+\max_{\bm{z}} \quad & \sum_{i} \sum_{j} v_{ij} z_{ij} \\
+\text{s.t.} \quad & \frac{\sum_{i}\sum_{j} c_{ij} z_{ij}}{\sum_{i}\sum_{j} v_{ij} z_{ij}} \le \rho  \\
+& \sum_{j} z_{ij} = 1, \quad \forall i \\
+& z_{ij} \in \{0, 1\}, \quad\forall i,\forall j
+\end{aligned}
+\end{equation}
+\begin{itemize}
+    \item $i$：表示每一条定价样本，即冒泡
+    \item $j \in J$：表示待选的折扣
+    \item $v_{ij}$：表示冒泡$i$在折扣 $j$下的收益
+    \item $c_{ij}$：表示冒泡$i$在折扣 $j$下的补贴金额
+    \item $z_{ij}$：决定对于冒泡$i$是否选择折扣$j$的决策变量
+    \item $\rho$：表示补贴率
+\end{itemize}
+
+\subsection{拉格朗日对偶问题}
+
+拉格朗日对偶将 NP-Hard 问题分解为易解的子问题。
+
+\subsubsection{拉格朗日函数}
+
+线性松弛问题 \eqref{eq:mckp_sr} 的约束分为两类：
+\begin{enumerate}
+    \item 不等式约束（预算约束）：$\sum_{i}\sum_{j} z_{ij} \cdot c_{ij} - \rho \cdot \sum_{i}\sum_{j} v_{ij} z_{ij} \leq 0$
+    \item 等式约束（每个个体选且仅选一个处理）：$\sum_{j} z_{ij} - 1 = 0, \forall i$
+\end{enumerate}
+
+
+附录证明了对于等式约束可以不松弛，解的效果是等价的。
+因此在构造拉格朗日函数（Lagrangian Function）$L(\bm z,\mu)$时只对不等式约束进行松弛，得到拉格朗日函数$L(\bm{z},\mu)$：
+\begin{align}
+L(\bm{z}, \mu) &= \sum_{i}\sum_{j} z_{ij} \cdot v_{ij} - \mu \cdot \left( \sum_{i}\sum_{j} z_{ij} \cdot c_{ij}-\sum_i\sum_j\rho \cdot v_{ij}\cdot z_{ij}\right)\\
+&= \sum_{i}\sum_{j} z_{ij} \cdot v_{ij} + \mu \sum_i\sum_j\rho \cdot v_{ij}\cdot z_{ij} - \mu \sum_{i}\sum_{j} z_{ij} \cdot c_{ij}  \\
+&= \sum_{i}\sum_{j} z_{ij} \cdot [(1+\mu\rho)\cdot v_{ij} - \mu \cdot c_{ij} ]
+\end{align}
+\subsubsection{对偶函数}
+对偶函数 $D(\mu)$ 是关于$\mu$的函数，
+定义为：给定 $\mu$ 时，$L(\bm{z}, \mu)$ 关于 $\bm{z}$ 的最大值：
+
+\begin{align}\label{eq:dualfunction}
+D(\mu) &= \max_{\bm{z}} L(z, \mu) \\
+&= \max_{\bm{z}} \left( \sum_{i}\sum_{j} z_{ij} \cdot ((1+\mu\rho)\cdot v_{ij} - \mu \cdot c_{ij} )    \right)\\
+&=  \underbrace{\max_{\bm{z_1}}  \sum_{j} z_{1j} \cdot [(1+\mu\rho)v_{1j} - \mu \cdot c_{1j} ] + \cdots + \max_{\bm{z_N}}  \sum_{j} z_{Nj} \cdot [(1+\mu\rho)\cdot v_{Nj} - \mu \cdot c_{Nj} ]}_{\sum_{i}\max_{\bm{z_{i}}} \left(\sum_{j} z_{ij} \cdot [(1+\mu\rho)\cdot v_{ij} - \mu \cdot c_{ij} ] \right)}\\
+&=  \sum_{i}\max_{\bm{z_{i}}} \left(\sum_{j} z_{ij} \cdot \left[(1+\mu\rho)\cdot v_{ij} - \mu \cdot c_{ij} \right] \right) 
+\end{align}
+
+要使$L(\bm z,\mu)$取最大值，需对每个个体 $i$ 选择能最大化 $(v_{ij} - \mu c_{ij})$ 的处理 $j$：
+
+令：
+\begin{equation}
+j^{*}(i, \mu) = \arg\max_{j} [(1+\mu\rho)v_{ij} - \mu \cdot c_{ij}]
+\end{equation}
+
+\textbf{定义对偶函数解：}
+对于给定的$\mu$ 确定的决策变量  $\bm{z^d} = \{z_{ij}^d\}$ 为：
+$$z_{ij}^d = 
+\begin{cases} 
+1, & \text{if } j = j^*(i,\mu)\\ 
+0, & \text{otherwise} 
+\end{cases}$$
+把$\bm {z^d}$代入\eqref{eq:dualfunction}，可得：
+
+\begin{equation}\label{eq:Dlambda}
+\begin{aligned}
+D(\mu)&=\mu \cdot (\rho \cdot \sum_{i}\sum_{j} v_{ij^*(i,\mu)} z_{ij} ) + \sum_i(v_{ij^*(i,\mu)}-\mu \cdot c_{ij^*(i,\mu)})\\
+&= \mu \cdot \left( \sum_i\rho v_{ij^*(i,\mu)}-\sum_{i} c_{ij^*(i,\mu)} \right) + \sum_{i} v_{ij^*(i,\mu)}
+\end{aligned}
+\end{equation}
+
+\subsubsection{对偶问题}
+基于对偶函数$D(\mu)$ \eqref{eq:Dlambda}，其对应的对偶问题如下所示：
+\begin{equation}\label{eq:dual_problem}
+\min_{\mu \ge 0} D(\mu)
+=\min_{\mu \ge0}\left(\mu \cdot \left(\sum_i\rho v_{ij^*(i,\mu)}-\sum_ic_{ij^*(i,\mu)}\right)+\sum_iv_{ij^*(i,\mu)}\right)
+\end{equation}
+
+该问题的最优解可通过求导得到。然而，由于\eqref{eq:dual_problem}中$j^*(i,\mu)$为分段线性函数，所以对偶函数$D(\mu)$存在不可导的点。
+
+常用的替代方案为用次梯度进行求导计算\citep{boyd2004convex}。$D(\mu)$的次梯度如下所示：
+\begin{align}
+D'(\mu) &= \frac{\partial D(\mu)}{\partial \mu} \\
+&=  \sum_i\rho v_{ij^*(i,\mu)}-\sum_{i} c_{ij^*(i,\mu)}
+\end{align}
+$\mu^*$可在$D'(\mu)=0$时求得。
+\paragraph{方法二：二分法求解补贴率约束建模}
+由于 $h'(\mu)$ 关于 $\mu$ 单调递减（$\mu$ 越大，选的补贴方案成本越低，总成本越低），使用二分法快速逼近零点。
+
+\begin{algorithm}[H]
+\caption{二分法求解 $\mu^*$}
+\begin{algorithmic}[1]
+\State 初始化：$\mu_{\text{left}}=0$, $\mu_{\text{right}}= \max\limits_{i,j}\frac{1}{\frac{c_{ij}}{v_{ij}}-\rho}$, $\epsilon$ (误差阈值)，目标补贴率$\rho$
+\While{$\mu_{\text{right}} - \mu_{\text{left}} \ge \epsilon$}
+    \State $\mu_{\text{mid}} = (\mu_{\text{right}} + \mu_{\text{left}})/2$
+    \State 计算 $j^*(i,\mu) = \underset{j}{\operatorname{argmax}} \left( (1+\mu_{mid}\rho)v_{ij} - \mu_{\text{mid}} c_{ij} \right), \forall i$
+    \State $\rho' = \frac{\sum_i c_{ij^*(i,\mu)}}{\sum_iv_{ij^*(i,\mu)}}$
+    \State $h'(\mu_{\text{mid}}) =   \rho -\rho' $
+    \If{$h'(\mu_{\text{mid}}) \ge 0$}
+        \State $\mu_{\text{right}} = \mu_{\text{mid}}$ \Comment{预算剩余，需减小$\mu$}
+    \Else
+        \State $\mu_{\text{left}} = \mu_{\text{mid}}$ \Comment{成本超支，需增大$\mu$} 
+    \EndIf
+\EndWhile
+\State \Return $\mu^* = (\mu_{\text{left}} + \mu_{\text{right}})/2$
+\end{algorithmic}
+\end{algorithm}
